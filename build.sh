@@ -1,0 +1,2 @@
+sqlc generate
+go build
