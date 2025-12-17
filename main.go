@@ -47,7 +47,7 @@ func main() {
 	commandList.register("users", handlerUsers)
 	commandList.register("agg", handlerAgg)
 	commandList.register("addfeed", handlerAddFeed)
-	commandList.register("listfeeds", handlerListFeeds)
+	commandList.register("feeds", handlerListFeeds)
 	commandList.register("help", handlerHelp)
 
 	args := os.Args
@@ -66,12 +66,4 @@ func main() {
 		fmt.Printf("Error: %v\n", err)
 		os.Exit(1)
 	}
-
-	conf, err = config.Read()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	fmt.Println(conf)
 }
