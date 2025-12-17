@@ -45,6 +45,9 @@ func main() {
 	commandList.register("register", handlerRegister)
 	commandList.register("reset", handlerResetUsers)
 	commandList.register("users", handlerUsers)
+	commandList.register("agg", handlerAgg)
+	commandList.register("addfeed", handlerAddFeed)
+	commandList.register("listfeeds", handlerListFeeds)
 	commandList.register("help", handlerHelp)
 
 	args := os.Args

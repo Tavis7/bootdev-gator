@@ -1,2 +1,2 @@
-sqlc generate
-go build
+sqlc generate &&
+    go build

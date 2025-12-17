@@ -102,6 +102,76 @@ func handlerResetUsers(s *state, cmd command) error {
 	return nil
 }
 
+func handlerAgg(s *state, cmd command) error {
+	if len(cmd.args) != 0 {
+		return fmt.Errorf("No arguments expected")
+	}
+
+	feedURL := "https://www.wagslane.dev/index.xml"
+
+	feed, err := fetchFeed(context.Background(), feedURL)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%v\n", feed)
+
+	return nil
+}
+
+func handlerAddFeed(s *state, cmd command) error {
+	if len(cmd.args) != 2 {
+		return fmt.Errorf("Exactly two arguments expected")
+	}
+
+	feedName := cmd.args[0]
+	feedURL := cmd.args[1]
+
+	username := s.config.Current_user_name
+
+	user, err := s.database.GetUser(context.Background(), username)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Adding feed %v @ %v for %v\n", feedName, feedURL, username)
+
+	now := time.Now().UTC()
+	feed, err := s.database.CreateFeed(context.Background(),
+		database.CreateFeedParams{
+			ID:        uuid.New(),
+			CreatedAt: now,
+			UpdatedAt: now,
+			Name:      feedName,
+			Url:       feedURL,
+			UserID:    user.ID,
+		})
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Added feed %v\n", feed)
+
+	return nil
+}
+
+func handlerListFeeds(s *state, cmd command) error {
+	if len(cmd.args) != 0 {
+		return fmt.Errorf("No arguments expected")
+	}
+
+	feeds, err := s.database.GetFeeds(context.Background())
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feeds {
+		fmt.Printf(`"%v": %v (created by %v)`+"\n", feed.Name, feed.Url, feed.Username.String)
+	}
+
+	return nil
+}
+
 func handlerHelp(s *state, cmd command) error {
 	if len(cmd.args) != 0 {
 		return fmt.Errorf("No arguments expected")
