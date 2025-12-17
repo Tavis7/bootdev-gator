@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"context"
-	"time"
-	"github.com/google/uuid"
+	"fmt"
 	"github.com/Tavis7/bootdev-gator/internal/database"
+	"github.com/google/uuid"
+	"time"
 )
 
 type command struct {
@@ -49,12 +49,12 @@ func handlerRegister(s *state, cmd command) error {
 
 	now := time.Now().UTC()
 	user, err := s.database.CreateUser(context.Background(),
-	database.CreateUserParams{
-		ID: uuid.New(),
-		CreatedAt: now,
-		UpdatedAt: now,
-		Name: username,
-	})
+		database.CreateUserParams{
+			ID:        uuid.New(),
+			CreatedAt: now,
+			UpdatedAt: now,
+			Name:      username,
+		})
 	if err != nil {
 		return err
 	}
@@ -102,6 +102,19 @@ func handlerResetUsers(s *state, cmd command) error {
 	return nil
 }
 
+func handlerHelp(s *state, cmd command) error {
+	if len(cmd.args) != 0 {
+		return fmt.Errorf("No arguments expected")
+	}
+
+	fmt.Printf("Available commands:\n")
+	for k := range s.commands.commandList {
+		fmt.Printf("    %v\n", k)
+	}
+
+	return nil
+}
+
 func (c *commands) run(s *state, cmd command) error {
 	f, ok := c.commandList[cmd.name]
 	if !ok {
@@ -112,5 +125,5 @@ func (c *commands) run(s *state, cmd command) error {
 }
 
 func (c *commands) register(name string, f func(*state, command) error) {
-	c.commandList[name] = f;
+	c.commandList[name] = f
 }

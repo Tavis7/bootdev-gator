@@ -1,9 +1,9 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"os"
-	"database/sql"
 
 	"github.com/Tavis7/bootdev-gator/internal/config"
 	"github.com/Tavis7/bootdev-gator/internal/database"
@@ -12,8 +12,9 @@ import (
 import _ "github.com/lib/pq"
 
 type state struct {
-	config *config.Config
+	config   *config.Config
 	database *database.Queries
+	commands *commands
 }
 
 func main() {
@@ -36,13 +37,15 @@ func main() {
 	dbQueries := database.New(db)
 	s.database = dbQueries
 
-	commandList := commands{
+	s.commands = &commands{
 		make(map[string]func(*state, command) error),
 	}
+	commandList := s.commands
 	commandList.register("login", handlerLogin)
 	commandList.register("register", handlerRegister)
 	commandList.register("reset", handlerResetUsers)
 	commandList.register("users", handlerUsers)
+	commandList.register("help", handlerHelp)
 
 	args := os.Args
 	if len(args) < 2 {
@@ -50,7 +53,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	cmd := command {
+	cmd := command{
 		name: args[1],
 		args: args[2:],
 	}
