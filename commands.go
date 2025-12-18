@@ -228,10 +228,10 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 	}
 
 	s.database.DeleteFeedFollow(context.Background(),
-	database.DeleteFeedFollowParams{
-		UserID: user.ID,
-		FeedID: feed.ID,
-	})
+		database.DeleteFeedFollowParams{
+			UserID: user.ID,
+			FeedID: feed.ID,
+		})
 
 	return nil
 }
