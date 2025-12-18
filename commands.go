@@ -35,7 +35,6 @@ func handlerLogin(s *state, cmd command) error {
 	}
 
 	fmt.Printf("User has been set to '%v'\n", user.Name)
-	fmt.Printf("'%#v'\n", user)
 
 	return nil
 }
@@ -185,8 +184,6 @@ func helperFollow(s *state, feedURL string) error {
 		return err
 	}
 
-	fmt.Printf("Following feed %v @ %v for %v\n", feed.Name, feedURL, username)
-
 	now := time.Now().UTC()
 	followed, err := s.database.CreateFeedFollow(context.Background(),
 		database.CreateFeedFollowParams{
@@ -200,7 +197,7 @@ func helperFollow(s *state, feedURL string) error {
 		return err
 	}
 
-	fmt.Printf("%#v\n", followed)
+	fmt.Printf(`%v followed "%v"`+"\n", followed.Username.String, followed.Feedname.String)
 
 	return nil
 }
@@ -227,7 +224,7 @@ func handlerFollowing(s *state, cmd command) error {
 	}
 
 	for _, feed := range feeds {
-		fmt.Printf("%v] %v @ %v\n", feed.Username, feed.Feedname, feed.FeedUrl)
+		fmt.Printf(`%v is following "%v" @ %v`+"\n", feed.Username, feed.Feedname, feed.FeedUrl)
 	}
 
 	return nil
