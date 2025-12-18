@@ -152,7 +152,7 @@ func handlerAddFeed(s *state, cmd command) error {
 
 	fmt.Printf("Added feed %v\n", feed)
 
-	return nil
+	return helperFollow(s, feedURL)
 }
 
 func handlerListFeeds(s *state, cmd command) error {
@@ -167,6 +167,67 @@ func handlerListFeeds(s *state, cmd command) error {
 
 	for _, feed := range feeds {
 		fmt.Printf(`"%v": %v (created by %v)`+"\n", feed.Name, feed.Url, feed.Username.String)
+	}
+
+	return nil
+}
+
+func helperFollow(s *state, feedURL string) error {
+	username := s.config.Current_user_name
+
+	user, err := s.database.GetUser(context.Background(), username)
+	if err != nil {
+		return err
+	}
+
+	feed, err := s.database.GetFeedByURL(context.Background(), feedURL)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Following feed %v @ %v for %v\n", feed.Name, feedURL, username)
+
+	now := time.Now().UTC()
+	followed, err := s.database.CreateFeedFollow(context.Background(),
+		database.CreateFeedFollowParams{
+			ID:        uuid.New(),
+			CreatedAt: now,
+			UpdatedAt: now,
+			UserID:    user.ID,
+			FeedID:    feed.ID,
+		})
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("%#v\n", followed)
+
+	return nil
+}
+
+func handlerFollow(s *state, cmd command) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("Exactly one argument expected")
+	}
+
+	feedURL := cmd.args[0]
+
+	return helperFollow(s, feedURL)
+}
+
+func handlerFollowing(s *state, cmd command) error {
+	if len(cmd.args) != 0 {
+		return fmt.Errorf("No arguments expected")
+	}
+
+	username := s.config.Current_user_name
+	feeds, err := s.database.GetFeedFollowsForUser(context.Background(), username)
+	if err != nil {
+		return err
+	}
+
+	for _, feed := range feeds {
+		fmt.Printf("%v] %v @ %v\n", feed.Username, feed.Feedname, feed.FeedUrl)
 	}
 
 	return nil
