@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"github.com/Tavis7/bootdev-gator/internal/database"
 	"github.com/google/uuid"
@@ -102,8 +103,22 @@ func handlerResetUsers(s *state, cmd command) error {
 }
 
 func handlerAgg(s *state, cmd command) error {
-	if len(cmd.args) != 0 {
-		return fmt.Errorf("No arguments expected")
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("Exactly one argument expected")
+	}
+
+	timeBetweenRequests, err := time.ParseDuration(cmd.args[0])
+	if err != nil {
+		return err
+	}
+
+	ticker := time.NewTicker(timeBetweenRequests)
+	for ; ; <-ticker.C {
+		fmt.Printf("Scraping feed\n")
+		err = scrapeFeeds(s)
+		if err != nil {
+			return err
+		}
 	}
 
 	feedURL := "https://www.wagslane.dev/index.xml"
@@ -267,6 +282,42 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 		}
 		return handler(s, cmd, user)
 	}
+}
+
+func scrapeFeeds(s *state) error {
+	dbFeed, err := s.database.GetStalestFeed(context.Background())
+	if err != nil {
+		return fmt.Errorf("Getting stale feed: %w", err)
+	}
+
+	now := time.Now().UTC()
+	_, err = s.database.MarkFeedFetched(context.Background(),
+		database.MarkFeedFetchedParams{
+			LastFetchedAt: sql.NullTime{Time: now, Valid: true},
+			ID:            dbFeed.ID,
+		})
+	if err != nil {
+		return fmt.Errorf("Marking feed fetched: %w", err)
+	}
+
+	feedURL := dbFeed.Url
+
+	feed, err := fetchFeed(context.Background(), feedURL)
+	if err != nil {
+		return fmt.Errorf("Fetching feed: %w", err)
+	}
+
+	fmt.Printf(`Articles from "%v"`+"\n", feed.Channel.Title)
+	for _, item := range feed.Channel.Item {
+		if len(item.Title) > 0 {
+			fmt.Printf(` - "%v"`+"\n", item.Title)
+		} else {
+			fmt.Printf(" - %#v\n", item)
+		}
+	}
+	fmt.Printf("---\n")
+
+	return nil
 }
 
 func (c *commands) register(name string, f func(*state, command) error) {
