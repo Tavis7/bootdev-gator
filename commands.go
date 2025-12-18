@@ -118,7 +118,7 @@ func handlerAgg(s *state, cmd command) error {
 	return nil
 }
 
-func handlerAddFeed(s *state, cmd command) error {
+func handlerAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 2 {
 		return fmt.Errorf("Exactly two arguments expected")
 	}
@@ -126,14 +126,7 @@ func handlerAddFeed(s *state, cmd command) error {
 	feedName := cmd.args[0]
 	feedURL := cmd.args[1]
 
-	username := s.config.Current_user_name
-
-	user, err := s.database.GetUser(context.Background(), username)
-	if err != nil {
-		return err
-	}
-
-	fmt.Printf("Adding feed %v @ %v for %v\n", feedName, feedURL, username)
+	fmt.Printf("Adding feed %v @ %v for %v\n", feedName, feedURL, user.Name)
 
 	now := time.Now().UTC()
 	feed, err := s.database.CreateFeed(context.Background(),
@@ -151,7 +144,7 @@ func handlerAddFeed(s *state, cmd command) error {
 
 	fmt.Printf("Added feed %v\n", feed)
 
-	return helperFollow(s, feedURL)
+	return helperFollow(s, feedURL, user)
 }
 
 func handlerListFeeds(s *state, cmd command) error {
@@ -171,14 +164,7 @@ func handlerListFeeds(s *state, cmd command) error {
 	return nil
 }
 
-func helperFollow(s *state, feedURL string) error {
-	username := s.config.Current_user_name
-
-	user, err := s.database.GetUser(context.Background(), username)
-	if err != nil {
-		return err
-	}
-
+func helperFollow(s *state, feedURL string, user database.User) error {
 	feed, err := s.database.GetFeedByURL(context.Background(), feedURL)
 	if err != nil {
 		return err
@@ -202,23 +188,22 @@ func helperFollow(s *state, feedURL string) error {
 	return nil
 }
 
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 1 {
 		return fmt.Errorf("Exactly one argument expected")
 	}
 
 	feedURL := cmd.args[0]
 
-	return helperFollow(s, feedURL)
+	return helperFollow(s, feedURL, user)
 }
 
-func handlerFollowing(s *state, cmd command) error {
+func handlerFollowing(s *state, cmd command, user database.User) error {
 	if len(cmd.args) != 0 {
 		return fmt.Errorf("No arguments expected")
 	}
 
-	username := s.config.Current_user_name
-	feeds, err := s.database.GetFeedFollowsForUser(context.Background(), username)
+	feeds, err := s.database.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
 		return err
 	}
@@ -250,6 +235,17 @@ func (c *commands) run(s *state, cmd command) error {
 	}
 
 	return f(s, cmd)
+}
+
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(*state, command) error {
+
+	return func(s *state, cmd command) error {
+		user, err := s.database.GetUser(context.Background(), s.config.Current_user_name)
+		if err != nil {
+			return err
+		}
+		return handler(s, cmd, user)
+	}
 }
 
 func (c *commands) register(name string, f func(*state, command) error) {
