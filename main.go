@@ -50,6 +50,7 @@ func main() {
 	commandList.register("feeds", handlerListFeeds)
 	commandList.register("follow", middlewareLoggedIn(handlerFollow))
 	commandList.register("following", middlewareLoggedIn(handlerFollowing))
+	commandList.register("unfollow", middlewareLoggedIn(handlerUnfollow))
 	commandList.register("help", handlerHelp)
 
 	args := os.Args

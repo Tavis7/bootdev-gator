@@ -144,7 +144,7 @@ func handlerAddFeed(s *state, cmd command, user database.User) error {
 
 	fmt.Printf("Added feed %v\n", feed)
 
-	return helperFollow(s, feedURL, user)
+	return helperFollow(s, feed.ID, user.ID)
 }
 
 func handlerListFeeds(s *state, cmd command) error {
@@ -164,20 +164,15 @@ func handlerListFeeds(s *state, cmd command) error {
 	return nil
 }
 
-func helperFollow(s *state, feedURL string, user database.User) error {
-	feed, err := s.database.GetFeedByURL(context.Background(), feedURL)
-	if err != nil {
-		return err
-	}
-
+func helperFollow(s *state, feed uuid.UUID, user uuid.UUID) error {
 	now := time.Now().UTC()
 	followed, err := s.database.CreateFeedFollow(context.Background(),
 		database.CreateFeedFollowParams{
 			ID:        uuid.New(),
 			CreatedAt: now,
 			UpdatedAt: now,
-			UserID:    user.ID,
-			FeedID:    feed.ID,
+			UserID:    user,
+			FeedID:    feed,
 		})
 	if err != nil {
 		return err
@@ -195,7 +190,12 @@ func handlerFollow(s *state, cmd command, user database.User) error {
 
 	feedURL := cmd.args[0]
 
-	return helperFollow(s, feedURL, user)
+	feed, err := s.database.GetFeedByURL(context.Background(), feedURL)
+	if err != nil {
+		return err
+	}
+
+	return helperFollow(s, feed.ID, user.ID)
 }
 
 func handlerFollowing(s *state, cmd command, user database.User) error {
@@ -211,6 +211,27 @@ func handlerFollowing(s *state, cmd command, user database.User) error {
 	for _, feed := range feeds {
 		fmt.Printf(`%v is following "%v" @ %v`+"\n", feed.Username, feed.Feedname, feed.FeedUrl)
 	}
+
+	return nil
+}
+
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.args) != 1 {
+		return fmt.Errorf("Exactly one argument expected")
+	}
+
+	feedURL := cmd.args[0]
+
+	feed, err := s.database.GetFeedByURL(context.Background(), feedURL)
+	if err != nil {
+		return err
+	}
+
+	s.database.DeleteFeedFollow(context.Background(),
+	database.DeleteFeedFollowParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
 
 	return nil
 }
