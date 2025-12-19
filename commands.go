@@ -4,9 +4,14 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"github.com/Tavis7/bootdev-gator/internal/database"
-	"github.com/google/uuid"
+	"strconv"
+	"strings"
 	"time"
+
+	"github.com/google/uuid"
+	"github.com/lib/pq"
+
+	"github.com/Tavis7/bootdev-gator/internal/database"
 )
 
 type command struct {
@@ -242,11 +247,45 @@ func handlerUnfollow(s *state, cmd command, user database.User) error {
 		return err
 	}
 
-	s.database.DeleteFeedFollow(context.Background(),
+	_, err = s.database.DeleteFeedFollow(context.Background(),
 		database.DeleteFeedFollowParams{
 			UserID: user.ID,
 			FeedID: feed.ID,
 		})
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func handlerBrowse(s *state, cmd command, user database.User) error {
+	if len(cmd.args) > 1 {
+		return fmt.Errorf("Only one argument expected")
+	}
+
+	limit := int32(2)
+	if len(cmd.args) == 1 {
+		l, err := strconv.ParseInt(cmd.args[0], 10, 32)
+		if err != nil {
+			return err
+		}
+		limit = int32(l)
+	}
+
+	feed, err := s.database.GetPostsForUser(context.Background(),
+		database.GetPostsForUserParams{
+			ID:    user.ID,
+			Limit: limit,
+		})
+	if err != nil {
+		return err
+	}
+
+	for _, item := range feed {
+		fmt.Printf(`[%v] "%v": "%v"`+"\n",
+			item.PublishedAt, item.FeedName, item.Title.String)
+	}
 
 	return nil
 }
@@ -284,6 +323,60 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 	}
 }
 
+func parseDate(dateString string) (time.Time, error) {
+	day := ""
+	year := "06"
+
+	dateString = strings.Trim(dateString, " ")
+	parts := strings.Fields(dateString)
+	offset := 0
+	if len(parts[0]) > 2 {
+		day = "Mon, "
+		offset = 1
+	}
+	if len(parts[2+offset]) > 2 {
+		year = "2006"
+	}
+
+	layout := day + "02 Jan " + year + " 15:04:05 -0700"
+	date, err := time.Parse(layout, dateString)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return date, nil
+}
+
+func createPost(s *state, item RSSItem, feedID uuid.UUID) error {
+	// fmt.Printf("      Creating post...\n")
+	now := time.Now().UTC()
+	publishedAt, err := parseDate(item.PubDate)
+	if err != nil {
+		return err
+	}
+
+	_, err = s.database.CreatePost(context.Background(),
+		database.CreatePostParams{
+			ID:          uuid.New(),
+			CreatedAt:   now,
+			UpdatedAt:   now,
+			Title:       sql.NullString{String: item.Title, Valid: true},
+			Url:         item.Link,
+			Description: sql.NullString{String: item.Description, Valid: true},
+			PublishedAt: publishedAt,
+			FeedID:      feedID,
+		})
+	if err != nil {
+		perr, ok := err.(*pq.Error)
+		if !ok ||
+			(perr.Code.Name() != "unique_violation") ||
+			(perr.Constraint != "posts_url_key") {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func scrapeFeeds(s *state) error {
 	dbFeed, err := s.database.GetStalestFeed(context.Background())
 	if err != nil {
@@ -309,10 +402,16 @@ func scrapeFeeds(s *state) error {
 
 	fmt.Printf(`Articles from "%v"`+"\n", feed.Channel.Title)
 	for _, item := range feed.Channel.Item {
-		if len(item.Title) > 0 {
-			fmt.Printf(` - "%v"`+"\n", item.Title)
-		} else {
-			fmt.Printf(" - %#v\n", item)
+		/*
+			if len(item.Title) > 0 {
+				fmt.Printf(` - "%v"`+"\n", item.Title)
+			} else {
+				fmt.Printf(" - %#v\n", item)
+			}
+		*/
+		err := createPost(s, item, dbFeed.ID)
+		if err != nil {
+			return err
 		}
 	}
 	fmt.Printf("---\n")
