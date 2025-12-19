@@ -61,4 +61,4 @@ browser for that.
 - Command to test database connection
 - Command to run database migrations
 - Default agg delay to something nice, like 10m
-- Refresh the stalest n feeds every <delay> instead of only the single stalest
+- Refresh the stalest n feeds every \<delay\> instead of only the single stalest
