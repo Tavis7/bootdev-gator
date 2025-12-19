@@ -291,8 +291,8 @@ func handlerBrowse(s *state, cmd command, user database.User) error {
 	}
 
 	for _, item := range feed {
-		fmt.Printf(`[%v] "%v": "%v"`+"\n",
-			item.PublishedAt, item.FeedName, item.Title.String)
+		fmt.Printf(`[%v] "%v": "%v"`+"\n    %v\n",
+			item.PublishedAt, item.FeedName, item.Title.String, item.Url)
 	}
 
 	return nil
@@ -310,8 +310,8 @@ func handlerHelp(s *state, cmd command) error {
 			docstring += " " + doc.args
 		}
 		length := len(docstring)
-		fmt.Printf("    %v:%v%v\n", docstring,
-			strings.Repeat(" ", max(s.commands.maxCommandArgLength-length+2, 1)), doc.doc)
+		fmt.Printf("    %v: %v%v\n", docstring,
+			strings.Repeat(" ", max(s.commands.maxCommandArgLength-length+1, 0)), doc.doc)
 	}
 
 	return nil
