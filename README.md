@@ -47,8 +47,18 @@ feeds using `bootdev-gator addfeed <name> <url>`.
 If a feed is already added, you will need to follow it instead with
 `bootdev-gator follow <url>`.
 
+Run `bootdev-gator agg 1m` in the background to refresh one feed per minute.
+
 List the latest items from the feeds you follow with `bootdev-gator browse
 <limit>`.
 
 Viewing the content is not supported. You will need to open the listed URL in a
 browser for that.
+
+# TODO (realistically maybe never)
+
+- Command to set up config file automatically
+- Command to test database connection
+- Command to run database migrations
+- Default agg delay to something nice, like 10m
+- Refresh the stalest n feeds every <delay> instead of only the single stalest
