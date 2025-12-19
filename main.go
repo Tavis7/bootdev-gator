@@ -38,21 +38,46 @@ func main() {
 	s.database = dbQueries
 
 	s.commands = &commands{
-		make(map[string]func(*state, command) error),
+		commandList: make(map[string]func(*state, command) error),
+		commandDocs: []commandDoc{},
 	}
 	commandList := s.commands
-	commandList.register("login", handlerLogin)
-	commandList.register("register", handlerRegister)
-	commandList.register("reset", handlerResetUsers)
-	commandList.register("users", handlerUsers)
-	commandList.register("agg", handlerAgg)
-	commandList.register("addfeed", middlewareLoggedIn(handlerAddFeed))
-	commandList.register("feeds", handlerListFeeds)
-	commandList.register("follow", middlewareLoggedIn(handlerFollow))
-	commandList.register("following", middlewareLoggedIn(handlerFollowing))
-	commandList.register("unfollow", middlewareLoggedIn(handlerUnfollow))
-	commandList.register("browse", middlewareLoggedIn(handlerBrowse))
-	commandList.register("help", handlerHelp)
+	commandList.register("login", "<username>",
+		"Log in as <username>",
+		handlerLogin)
+	commandList.register("register", "<username>",
+		"Register and log in as <username>",
+		handlerRegister)
+	commandList.register("reset", "",
+		"Delete everything and reset the database",
+		handlerResetUsers)
+	commandList.register("users", "",
+		"List users",
+		handlerUsers)
+	commandList.register("agg", "<delay>",
+		"Refresh one old feed every <delay> seconds, minutes, hours, etc.",
+		handlerAgg)
+	commandList.register("addfeed", "<name> <url>",
+		"Add and follow feed",
+		middlewareLoggedIn(handlerAddFeed))
+	commandList.register("feeds", "",
+		"List feeds",
+		handlerListFeeds)
+	commandList.register("follow", "<url>",
+		"Follow a feed",
+		middlewareLoggedIn(handlerFollow))
+	commandList.register("following", "",
+		"List feeds you are following",
+		middlewareLoggedIn(handlerFollowing))
+	commandList.register("unfollow", "<url>",
+		"Unfollow a feed you are following",
+		middlewareLoggedIn(handlerUnfollow))
+	commandList.register("browse", "[<limit>]",
+		"List the last <limit> posts from feeds you are following, default 2",
+		middlewareLoggedIn(handlerBrowse))
+	commandList.register("help", "",
+		"Print this help and exit",
+		handlerHelp)
 
 	args := os.Args
 	if len(args) < 2 {

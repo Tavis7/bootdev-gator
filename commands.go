@@ -19,8 +19,16 @@ type command struct {
 	args []string
 }
 
+type commandDoc struct {
+	name string
+	args string
+	doc  string
+}
+
 type commands struct {
-	commandList map[string]func(*state, command) error
+	commandList         map[string]func(*state, command) error
+	commandDocs         []commandDoc
+	maxCommandArgLength int
 }
 
 func handlerLogin(s *state, cmd command) error {
@@ -296,8 +304,14 @@ func handlerHelp(s *state, cmd command) error {
 	}
 
 	fmt.Printf("Available commands:\n")
-	for k := range s.commands.commandList {
-		fmt.Printf("    %v\n", k)
+	for _, doc := range s.commands.commandDocs {
+		docstring := doc.name
+		if len(doc.args) > 0 {
+			docstring += " " + doc.args
+		}
+		length := len(docstring)
+		fmt.Printf("    %v:%v%v\n", docstring,
+			strings.Repeat(" ", max(s.commands.maxCommandArgLength-length+2, 1)), doc.doc)
 	}
 
 	return nil
@@ -419,6 +433,8 @@ func scrapeFeeds(s *state) error {
 	return nil
 }
 
-func (c *commands) register(name string, f func(*state, command) error) {
+func (c *commands) register(name, args, doc string, f func(*state, command) error) {
 	c.commandList[name] = f
+	c.commandDocs = append(c.commandDocs, commandDoc{name: name, args: args, doc: doc})
+	c.maxCommandArgLength = max(c.maxCommandArgLength, len(name)+len(args))
 }
